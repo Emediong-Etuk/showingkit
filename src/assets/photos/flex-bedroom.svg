@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="747" viewBox="0 0 560 747" role="img">
+  <rect width="560" height="747" fill="#1a1814"/>
+  <rect x="80" y="80" width="400" height="520" fill="#24201b"/>
+  <rect x="200" y="140" width="160" height="220" fill="#2e2a24"/>
+  <rect x="210" y="150" width="140" height="200" fill="#1c1916"/>
+  <rect x="120" y="480" width="320" height="40" fill="#3a342c"/>
+  <text x="48" y="730" fill="#c9bba8" font-family="ui-monospace,monospace" font-size="14">ALCOVE · NO EXTERIOR WINDOW</text>
+</svg>
