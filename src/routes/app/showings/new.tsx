@@ -1,11 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { AgentLog } from "@/components/agent-log";
+import { PhotoIntake } from "@/components/photo-intake";
 import { Button, Field, Input, Textarea, chipClass, pillClass } from "@/components/ui/kit";
 import { SCRIPT_TICKS, defaultClaimsFromText } from "@/lib/agent";
 import { CITY_LIST } from "@/lib/cities";
+import { filesToPhotos } from "@/lib/photos";
 import { newShowingDraft, useKit } from "@/lib/store";
-import type { CitySlug, EvidencePhoto, MechanicalComfort, Minutes, Role } from "@/lib/types";
+import type { CitySlug, MechanicalComfort, Minutes, Role } from "@/lib/types";
 import { CITY_SLUGS } from "@/lib/types";
 import { nowIso, uid } from "@/lib/utils";
 
@@ -40,6 +42,8 @@ function Wizard() {
   const [running, setRunning] = useState(false);
   const [err, setErr] = useState("");
   const [claim, setClaim] = useState("");
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoErr, setPhotoErr] = useState("");
 
   const onDone = useCallback(() => {
     generateScriptFor(draft.id, tpl || undefined);
@@ -155,30 +159,47 @@ function Wizard() {
                 </Field>
               </div>
               <Field label="Listing photos (3–12)">
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files ?? []).slice(0, 12);
-                    const photos: EvidencePhoto[] = files.map((f) => ({
-                      id: uid("lp"),
-                      src: URL.createObjectURL(f),
-                      caption: f.name,
-                      kind: "listing",
-                      source: "listing",
-                      createdAt: nowIso(),
-                    }));
-                    patch("listingPhotos", [...draft.listingPhotos, ...photos].slice(0, 12));
+                <PhotoIntake
+                  label="Listing stills"
+                  hint="Drop the broker’s crops here. We keep compressed copies so they survive a reload."
+                  busy={photoBusy}
+                  onFiles={(files) => {
+                    setPhotoErr("");
+                    setPhotoBusy(true);
+                    void filesToPhotos(files, "listing")
+                      .then((photos) => {
+                        setDraft((d) => ({
+                          ...d,
+                          listingPhotos: [...d.listingPhotos, ...photos].slice(0, 12),
+                        }));
+                      })
+                      .catch(() => setPhotoErr("Could not develop those stills. Try a JPEG or PNG."))
+                      .finally(() => setPhotoBusy(false));
                   }}
                 />
               </Field>
+              {photoErr ? <p className="text-sm text-danger">{photoErr}</p> : null}
               <div className="flex flex-wrap gap-2">
                 {draft.listingPhotos.map((p) => (
-                  <img key={p.id} src={p.src} alt="" className="field-photo size-16 object-cover" />
+                  <button
+                    key={p.id}
+                    type="button"
+                    className="relative"
+                    onClick={() =>
+                      setDraft((d) => ({
+                        ...d,
+                        listingPhotos: d.listingPhotos.filter((x) => x.id !== p.id),
+                      }))
+                    }
+                    aria-label={`Remove ${p.caption || "listing still"}`}
+                  >
+                    <img src={p.src} alt="" className="field-photo size-16 object-cover" />
+                  </button>
                 ))}
               </div>
-              <p className="font-mono text-xs text-muted">{draft.listingPhotos.length} listing stills on file.</p>
+              <p className="font-mono text-xs text-muted">
+                {draft.listingPhotos.length} listing stills on file. Tap a thumb to lift it.
+              </p>
               <div>
                 <p className="font-mono text-[11px] uppercase tracking-wider text-muted">Claim chips</p>
                 <div className="mt-2 flex flex-wrap gap-2">
