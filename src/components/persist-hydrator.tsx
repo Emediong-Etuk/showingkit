@@ -10,7 +10,9 @@ export function PersistHydrator() {
     }
     const unsub = useKit.persist.onFinishHydration(finish);
     void useKit.persist.rehydrate();
-    const t = window.setTimeout(finish, 80);
+    // Fallback only — localStorage rehydrate is usually a microtask.
+    // An 80ms timeout raced session restore and bounced people to /login.
+    const t = window.setTimeout(finish, 2500);
     return () => {
       unsub();
       window.clearTimeout(t);

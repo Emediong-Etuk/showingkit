@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { Button, Field, Input } from "@/components/ui/kit";
 import { useKit } from "@/lib/store";
@@ -8,11 +8,19 @@ export const Route = createFileRoute("/signup")({ component: Signup });
 
 function Signup() {
   const login = useKit((s) => s.login);
+  const session = useKit((s) => s.session);
+  const hydrated = useKit((s) => s.hydrated);
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
+
+  useEffect(() => {
+    if (hydrated && session) {
+      void navigate({ to: "/app" });
+    }
+  }, [hydrated, session, navigate]);
 
   return (
     <div className="grid min-h-screen place-items-center bg-shell px-4 py-10">
