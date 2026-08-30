@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="747" viewBox="0 0 560 747" role="img">
+  <rect width="560" height="747" fill="#d8d2c8"/>
+  <rect x="40" y="80" width="480" height="520" fill="#cfc8bc"/>
+  <rect x="80" y="420" width="400" height="160" fill="#b7c4c8"/>
+  <rect x="340" y="180" width="90" height="130" fill="#efe7d8" stroke="#1c1916" stroke-width="4"/>
+  <circle cx="368" cy="230" r="10" fill="#1c1916"/>
+  <circle cx="402" cy="230" r="10" fill="#1c1916"/>
+  <rect x="360" y="260" width="50" height="18" fill="#3f6f5b"/>
+  <text x="48" y="730" fill="#1c1916" font-family="ui-monospace,monospace" font-size="14">BATH · GFCI / TUB OUTLET</text>
+</svg>
