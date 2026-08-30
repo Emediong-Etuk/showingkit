@@ -17,12 +17,16 @@ TanStack Start, React Router (file routes), Tailwind v4, Zustand. Data stays in 
 
 ## Run locally
 
+Requires **Node 20+**. In the repo root:
+
 ```bash
 npm install
 npm run dev
 ```
 
-Then open the URL Vite prints. Demo login: **Continue as demo user**.
+Open [http://localhost:8080](http://localhost:8080). Demo login: **Continue as demo user**.
+
+If you see `spawn vite ENOENT` or `failed to run vite: not found`, dependencies are not installed. Run `npm install` in this folder (not a parent folder), then `npm run dev` again.
 
 ## Routes
 

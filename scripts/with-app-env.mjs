@@ -20,9 +20,9 @@
  * `process.env`, which is why the merge has to happen before Vite starts.
  */
 import { spawn } from "node:child_process";
-import { readFileSync, realpathSync } from "node:fs";
+import { accessSync, constants as fsConstants, readFileSync, realpathSync } from "node:fs";
 import { constants as osConstants } from "node:os";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const APP_ENV_REL_PATH = ".grok/app-env.json";
@@ -104,20 +104,74 @@ export function isMainModule(moduleUrl) {
   }
 }
 
+function localBinDir() {
+  return join(projectRoot(), "node_modules", ".bin");
+}
+
+/** Put this repo's `node_modules/.bin` first so `vite` resolves after `npm install`. */
+export function withLocalBinPath(env) {
+  const dir = localBinDir();
+  const key = Object.keys(env).find((k) => k.toLowerCase() === "path") ?? "PATH";
+  const parts = String(env[key] || "")
+    .split(delimiter)
+    .filter(Boolean);
+  if (!parts.includes(dir)) parts.unshift(dir);
+  return { ...env, [key]: parts.join(delimiter) };
+}
+
+function fileExists(path) {
+  try {
+    accessSync(path, fsConstants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Prefer the binary npm installed into this repo. Bare `spawn("vite")` misses
+ * it when PATH was not set up by npm (Windows, IDEs, `node scripts/…` by hand).
+ */
+export function resolveLocalCommand(command) {
+  if (!command || command.includes("/") || command.includes("\\")) return command;
+  const bin = localBinDir();
+  const names =
+    process.platform === "win32"
+      ? [`${command}.cmd`, `${command}.exe`, command]
+      : [command];
+  for (const name of names) {
+    const candidate = join(bin, name);
+    if (fileExists(candidate)) return candidate;
+  }
+  return command;
+}
+
 function main(argv) {
   const [command, ...args] = argv;
   if (!command) {
-    console.error("usage: node scripts/with-app-env.mjs <command> [args…]");
+    console.error("usage: node scripts/with-app-env.mjs <command> [args\u2026]");
     process.exit(2);
   }
-  const env = mergeAppEnv(readAppEnv(projectRoot()), process.env);
-  const child = spawn(command, args, { stdio: "inherit", env });
+  const env = withLocalBinPath(mergeAppEnv(readAppEnv(projectRoot()), process.env));
+  const resolved = resolveLocalCommand(command);
+  const useShell = process.platform === "win32" && resolved.endsWith(".cmd");
+  const child = spawn(resolved, args, { stdio: "inherit", env, shell: useShell });
   // The dev server is long-running and is stopped by signalling this wrapper.
   for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
     process.on(signal, () => child.kill(signal));
   }
   child.on("error", (err) => {
-    console.error(`[with-app-env] failed to run ${command}:`, err?.message || err);
+    const missing = err && err.code === "ENOENT";
+    if (missing) {
+      console.error(
+        `[with-app-env] failed to run ${command}: not found.\n` +
+          `Install dependencies first, then start the app:\n` +
+          `  npm install\n` +
+          `  npm run dev`,
+      );
+    } else {
+      console.error(`[with-app-env] failed to run ${command}:`, err?.message || err);
+    }
     process.exit(127);
   });
   child.on("exit", (code, signal) => {
