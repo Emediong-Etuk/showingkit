@@ -348,7 +348,17 @@ export const useKit = create<AppState>()(
     }),
     {
       name: STORAGE_KEY,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => ({
+        getItem: (name) => localStorage.getItem(name),
+        setItem: (name, value) => {
+          try {
+            localStorage.setItem(name, value);
+          } catch {
+            // Quota — keep the in-memory kit; next smaller write may succeed.
+          }
+        },
+        removeItem: (name) => localStorage.removeItem(name),
+      })),
       skipHydration: true,
       partialize: (s) => ({
         session: s.session,
