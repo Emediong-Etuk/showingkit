@@ -1,7 +1,10 @@
 /**
  * Guest side of the grok-web ↔ sandbox preview postMessage bridge.
+ *
  * Activates only when this page is framed by an allowlisted Grok embedder.
+ * Top-level runs (download/export, local `npm run dev`, deployed sites) noop.
  */
+
 import { z } from "zod";
 import { resolveParentEmbedderOrigin } from "./preview-embedder-origin";
 
@@ -20,18 +23,24 @@ const EnvelopeSchema = z.object({
   type: z.string().min(1),
 });
 
-const HelloSchema = EnvelopeSchema.extend({ type: z.literal("hello") });
+const HelloSchema = EnvelopeSchema.extend({
+  type: z.literal("hello"),
+});
+
 const NavigateSchema = EnvelopeSchema.extend({
   type: z.literal("navigate"),
   path: z.string().min(1),
 });
+
 const HistorySchema = EnvelopeSchema.extend({
   type: z.literal("history"),
   delta: z.union([z.literal(-1), z.literal(1)]),
 });
 
 export type PreviewHostBridgeOptions = {
+  /** Prefer the app router when available; falls back to history.pushState. */
   navigate?: (path: string) => void;
+  /** Best-effort registered paths for host autosuggest (may be empty). */
   getRoutePaths?: () => string[];
 };
 
@@ -47,13 +56,17 @@ export function isSafeBridgePath(path: string): boolean {
   }
 }
 
+/**
+ * Install host↔guest messaging. Returns a dispose function.
+ * Noops (returns a no-op dispose) when not embedded under a Grok parent.
+ */
 export function installPreviewHostBridge(
   options: PreviewHostBridgeOptions = {},
 ): () => void {
   if (typeof window === "undefined") return () => {};
 
   const ancestorOrigin =
-    typeof location.ancestorOrigins !== "undefined" && location.ancestorOrigins.length > 0
+    typeof location.ancestorOrigins !== 'undefined' && location.ancestorOrigins.length > 0
       ? location.ancestorOrigins[0]
       : null;
   const parentOrigin = resolveParentEmbedderOrigin(
@@ -70,7 +83,9 @@ export function installPreviewHostBridge(
 
   const isAtHistoryRoot = () => {
     const state = window.history.state;
-    return Boolean(state && typeof state === "object" && state[ROOT_STATE_KEY] === true);
+    return Boolean(
+      state && typeof state === "object" && state[ROOT_STATE_KEY] === true,
+    );
   };
 
   try {
@@ -88,7 +103,7 @@ export function installPreviewHostBridge(
       originalReplaceState(marked, "", window.location.href);
     }
   } catch {
-    // ignore
+    // ignore if the document cannot be marked
   }
 
   const post = (message: object) => {
@@ -107,11 +122,12 @@ export function installPreviewHostBridge(
   };
 
   const reportRoutes = () => {
+    const paths = options.getRoutePaths?.() ?? [];
     post({
       channel: PREVIEW_BRIDGE_CHANNEL,
       version: PREVIEW_BRIDGE_VERSION,
       type: "routes",
-      paths: options.getRoutePaths?.() ?? [],
+      paths,
     });
   };
 
@@ -124,7 +140,7 @@ export function installPreviewHostBridge(
       window.history.pushState(window.history.state, "", next);
       window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
     } catch {
-      // ignore
+      // ignore malformed paths
     }
   };
 
@@ -140,19 +156,26 @@ export function installPreviewHostBridge(
   const announce = () => {
     reportLocation();
     reportRoutes();
-    post({ channel: PREVIEW_BRIDGE_CHANNEL, version: PREVIEW_BRIDGE_VERSION, type: "ready" });
+    post({
+      channel: PREVIEW_BRIDGE_CHANNEL,
+      version: PREVIEW_BRIDGE_VERSION,
+      type: "ready",
+    });
   };
 
   const onMessage = (event: MessageEvent) => {
     if (event.source !== window.parent) return;
     if (event.origin !== parentOrigin) return;
+
     const envelope = EnvelopeSchema.safeParse(event.data);
     if (!envelope.success || envelope.data.version !== PREVIEW_BRIDGE_VERSION) return;
+
     if (envelope.data.type === "hello") {
       if (!HelloSchema.safeParse(event.data).success) return;
       announce();
       return;
     }
+
     if (envelope.data.type === "navigate") {
       const parsed = NavigateSchema.safeParse(event.data);
       if (!parsed.success) return;
@@ -160,6 +183,7 @@ export function installPreviewHostBridge(
       queueMicrotask(reportLocation);
       return;
     }
+
     if (envelope.data.type === "history") {
       const parsed = HistorySchema.safeParse(event.data);
       if (!parsed.success) return;
@@ -168,39 +192,60 @@ export function installPreviewHostBridge(
     }
   };
 
+  const onPopState = () => {
+    reportLocation();
+  };
+
+  const onHashChange = () => {
+    reportLocation();
+  };
+
   window.history.pushState = (data, unused, url) => {
     const next =
-      data && typeof data === "object" ? { ...data, [ROOT_STATE_KEY]: false } : data;
+      data && typeof data === "object"
+        ? { ...data, [ROOT_STATE_KEY]: false }
+        : data;
     originalPushState(next, unused, url);
     reportLocation();
   };
   window.history.replaceState = (data, unused, url) => {
-    const next = isAtHistoryRoot()
-      ? { ...(data && typeof data === "object" ? data : {}), [ROOT_STATE_KEY]: true }
-      : data;
+    const next =
+      isAtHistoryRoot()
+        ? {
+            ...(data && typeof data === "object" ? data : {}),
+            [ROOT_STATE_KEY]: true,
+          }
+        : data;
     originalReplaceState(next, unused, url);
     reportLocation();
   };
 
   window.addEventListener("message", onMessage);
-  window.addEventListener("popstate", reportLocation);
-  window.addEventListener("hashchange", reportLocation);
+  window.addEventListener("popstate", onPopState);
+  window.addEventListener("hashchange", onHashChange);
+
   announce();
 
   return () => {
     window.removeEventListener("message", onMessage);
-    window.removeEventListener("popstate", reportLocation);
-    window.removeEventListener("hashchange", reportLocation);
+    window.removeEventListener("popstate", onPopState);
+    window.removeEventListener("hashchange", onHashChange);
     window.history.pushState = originalPushState;
     window.history.replaceState = originalReplaceState;
   };
 }
 
+/** Collect static path patterns from a TanStack route tree (best-effort). */
 export function collectRoutePathsFromTree(routeTree: unknown): string[] {
   const paths = new Set<string>();
+
   const walk = (node: unknown) => {
     if (!node || typeof node !== "object") return;
-    const record = node as { fullPath?: unknown; path?: unknown; children?: unknown };
+    const record = node as {
+      fullPath?: unknown;
+      path?: unknown;
+      children?: unknown;
+    };
     const full =
       typeof record.fullPath === "string"
         ? record.fullPath
@@ -216,9 +261,12 @@ export function collectRoutePathsFromTree(routeTree: unknown): string[] {
     if (Array.isArray(children)) {
       for (const child of children) walk(child);
     } else if (children && typeof children === "object") {
-      for (const child of Object.values(children as Record<string, unknown>)) walk(child);
+      for (const child of Object.values(children as Record<string, unknown>)) {
+        walk(child);
+      }
     }
   };
+
   walk(routeTree);
   return [...paths];
 }
