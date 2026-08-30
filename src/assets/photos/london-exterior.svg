@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="420" viewBox="0 0 560 420" role="img">
+  <rect width="560" height="420" fill="#9aa3a0"/>
+  <rect x="40" y="40" width="480" height="340" fill="#b8a090"/>
+  <g fill="#6e5a48">
+    <rect x="80" y="80" width="70" height="90"/>
+    <rect x="180" y="80" width="70" height="90"/>
+    <rect x="310" y="80" width="70" height="90"/>
+    <rect x="410" y="80" width="70" height="90"/>
+    <rect x="80" y="200" width="70" height="90"/>
+    <rect x="180" y="200" width="70" height="90"/>
+    <rect x="310" y="200" width="70" height="90"/>
+    <rect x="410" y="200" width="70" height="90"/>
+  </g>
+  <rect x="240" y="250" width="80" height="130" fill="#2a241c"/>
+  <text x="24" y="400" fill="#f4efe6" font-family="ui-monospace,monospace" font-size="14">TERRACE · STREET FRONT</text>
+</svg>

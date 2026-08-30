@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="420" viewBox="0 0 560 420" role="img">
+  <rect width="560" height="420" fill="#c4b49a"/>
+  <rect x="0" y="0" width="560" height="220" fill="#7a9bb8"/>
+  <rect x="120" y="80" width="320" height="260" fill="#d8c8b0"/>
+  <rect x="240" y="180" width="80" height="160" fill="#3a342c"/>
+  <rect x="150" y="120" width="70" height="90" fill="#2a5080"/>
+  <rect x="340" y="120" width="70" height="90" fill="#2a5080"/>
+  <text x="24" y="400" fill="#1c1916" font-family="ui-monospace,monospace" font-size="14">GUEST HOUSE · ONE DOOR</text>
+</svg>
