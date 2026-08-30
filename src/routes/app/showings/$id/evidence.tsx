@@ -1,12 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { AgentLog } from "@/components/agent-log";
+import { PhotoIntake } from "@/components/photo-intake";
 import { Polaroid } from "@/components/polaroid";
 import { ShowingHeader, ShowingNav } from "@/components/showing-nav";
 import { Button, Field, Textarea } from "@/components/ui/kit";
 import { BRIEF_TICKS } from "@/lib/agent";
+import { filesToPhotos } from "@/lib/photos";
 import { useKit, useShowing } from "@/lib/store";
-import { nowIso, uid } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/showings/$id/evidence")({ component: EvidencePage });
 
@@ -16,9 +17,12 @@ function EvidencePage() {
   const patchShowing = useKit((s) => s.patchShowing);
   const addVisitPhoto = useKit((s) => s.addVisitPhoto);
   const captionVisitPhoto = useKit((s) => s.captionVisitPhoto);
+  const removeVisitPhoto = useKit((s) => s.removeVisitPhoto);
   const generateBriefFor = useKit((s) => s.generateBriefFor);
   const navigate = useNavigate();
   const [running, setRunning] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoErr, setPhotoErr] = useState("");
 
   const onDone = useCallback(() => {
     generateBriefFor(id);
@@ -33,24 +37,24 @@ function EvidencePage() {
       <ShowingHeader showing={showing} />
       <ShowingNav id={id} current="evidence" />
       <h2 className="font-display text-2xl">Visit photos</h2>
-      <input
-        className="mt-3"
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={(e) => {
-          Array.from(e.target.files ?? []).forEach((f) => {
-            addVisitPhoto(id, {
-              id: uid("vp"),
-              src: URL.createObjectURL(f),
-              caption: "",
-              kind: "visit",
-              source: "visit",
-              createdAt: nowIso(),
-            });
-          });
-        }}
-      />
+      <div className="mt-3">
+        <PhotoIntake
+          label="Visit stills"
+          hint="Drop the shots from the walk. Captions feed the brief — name the kick, the sash, the slope."
+          busy={photoBusy}
+          onFiles={(files) => {
+            setPhotoErr("");
+            setPhotoBusy(true);
+            void filesToPhotos(files, "visit")
+              .then((photos) => {
+                photos.forEach((p) => addVisitPhoto(id, p));
+              })
+              .catch(() => setPhotoErr("Could not develop those stills. Try a JPEG or PNG."))
+              .finally(() => setPhotoBusy(false));
+          }}
+        />
+      </div>
+      {photoErr ? <p className="mt-2 text-sm text-danger">{photoErr}</p> : null}
       <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4">
         {ev.photos.map((p) => (
           <div key={p.id}>
@@ -61,6 +65,13 @@ function EvidencePage() {
               value={p.caption}
               onChange={(e) => captionVisitPhoto(id, p.id, e.target.value)}
             />
+            <button
+              type="button"
+              className="mt-1 font-mono text-[11px] uppercase tracking-wider text-muted hover:text-danger"
+              onClick={() => removeVisitPhoto(id, p.id)}
+            >
+              Lift from tray
+            </button>
           </div>
         ))}
       </div>

@@ -156,8 +156,22 @@
     transition: background-color 150ms ease;
   }
 
-  input[type="file"]::file-selector-button:hover {
-    background-color: var(--color-copper-dark);
+  input[type="file"].photo-intake-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    max-width: none;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    opacity: 0;
+    pointer-events: none;
+    background: transparent;
+  }
+
+  input[type="file"].photo-intake-input::file-selector-button {
+    display: none;
   }
 
   select {
