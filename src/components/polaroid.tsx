@@ -44,3 +44,37 @@ export function Polaroid({
     </figure>
   );
 }
+
+/** Square listing thumb that maps seed jpg/svg paths onto bundled stills. */
+export function FieldStill({
+  src,
+  alt = "",
+  className,
+}: {
+  src?: string | null;
+  alt?: string;
+  className?: string;
+}) {
+  const [broken, setBroken] = useState(false);
+  const resolved = fieldStillSrc(src);
+  if (!resolved || broken) {
+    return (
+      <div
+        className={cn(
+          "field-photo grid size-24 shrink-0 place-items-center bg-paper-deep font-mono text-[10px] uppercase tracking-wider text-muted",
+          className,
+        )}
+      >
+        {alt || "still"}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={resolved}
+      alt={alt}
+      className={cn("field-photo size-24 shrink-0 object-cover bg-paper-deep", className)}
+      onError={() => setBroken(true)}
+    />
+  );
+}

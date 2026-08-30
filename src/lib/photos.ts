@@ -6,14 +6,29 @@ const JPEG_QUALITY = 0.68;
 const MAX_FILES = 12;
 
 /**
- * Demo stills in this kit ship as SVG (Git-friendly). Older seed data and
- * persisted showings still ask for `.jpg` — rewrite those public paths so
- * polaroids and listing thumbs never 404.
+ * Demo stills are bundled (src/assets/photos) so a clone does not depend on
+ * /public/photos being present, and persisted `.jpg` seed paths still resolve.
  */
+const bundled = import.meta.glob("../assets/photos/*.svg", {
+  eager: true,
+  query: "?url",
+  import: "default",
+}) as Record<string, string>;
+
+const STILLS_BY_STEM: Record<string, string> = {};
+for (const [path, url] of Object.entries(bundled)) {
+  const file = path.split("/").pop() ?? "";
+  STILLS_BY_STEM[file.replace(/\.svg$/i, "")] = url;
+}
+
 export function fieldStillSrc(src: string | undefined | null): string {
   if (!src) return "";
-  if (!src.startsWith("/photos/")) return src;
-  return src.replace(/\.jpe?g(\?.*)?$/i, ".svg$1");
+  if (/^(data:|blob:|https?:)/i.test(src)) return src;
+  const file = (src.split("/").pop() ?? "").split("?")[0];
+  const stem = file.replace(/\.(jpe?g|png|webp|gif|svg)$/i, "");
+  if (stem && STILLS_BY_STEM[stem]) return STILLS_BY_STEM[stem];
+  if (src.startsWith("/photos/")) return src.replace(/\.jpe?g(\?.*)?$/i, ".svg$1");
+  return src;
 }
 
 function readAsDataUrl(file: File): Promise<string> {

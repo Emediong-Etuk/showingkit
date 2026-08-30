@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { FieldStill } from "@/components/polaroid";
 import { Stamp } from "@/components/stamp";
 import { buttonVariants, pillClass } from "@/components/ui/kit";
 import { formatDay, priceLabel } from "@/lib/format";
@@ -75,7 +76,7 @@ function Library() {
             className="flex gap-4 rounded-xl bg-paper-dark p-4 no-underline transition-colors duration-150 hover:bg-paper-deep"
           >
             {s.listingPhotos[0] ? (
-              <img src={s.listingPhotos[0].src} alt="" className="field-photo size-24 object-cover" />
+              <FieldStill src={s.listingPhotos[0].src} alt={s.address} />
             ) : null}
             <div>
               <Stamp verdict={s.brief?.verdict ?? "UPCOMING"} className="text-[10px]" />
