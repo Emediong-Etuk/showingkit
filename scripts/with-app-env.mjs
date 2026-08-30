@@ -146,6 +146,21 @@ export function resolveLocalCommand(command) {
   return command;
 }
 
+/**
+ * How to spawn `command` without `shell: true` (Node DEP0190).
+ * Local JS CLIs (vite) run as `node path/to/bin.js …`.
+ */
+export function resolveSpawnTarget(command) {
+  if (!command || command.includes("/") || command.includes("\\")) {
+    return { file: command, prefix: [] };
+  }
+  const js = join(projectRoot(), "node_modules", command, "bin", `${command}.js`);
+  if (fileExists(js)) {
+    return { file: process.execPath, prefix: [js] };
+  }
+  return { file: resolveLocalCommand(command), prefix: [] };
+}
+
 function main(argv) {
   const [command, ...args] = argv;
   if (!command) {
@@ -153,9 +168,8 @@ function main(argv) {
     process.exit(2);
   }
   const env = withLocalBinPath(mergeAppEnv(readAppEnv(projectRoot()), process.env));
-  const resolved = resolveLocalCommand(command);
-  const useShell = process.platform === "win32" && resolved.endsWith(".cmd");
-  const child = spawn(resolved, args, { stdio: "inherit", env, shell: useShell });
+  const { file, prefix } = resolveSpawnTarget(command);
+  const child = spawn(file, [...prefix, ...args], { stdio: "inherit", env });
   // The dev server is long-running and is stopped by signalling this wrapper.
   for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
     process.on(signal, () => child.kill(signal));
