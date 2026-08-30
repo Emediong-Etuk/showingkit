@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="560" height="747" viewBox="0 0 560 747" role="img">
+  <rect width="560" height="747" fill="#141210"/>
   <polygon points="180,40 380,40 560,747 0,747" fill="#d8cfc0"/>
   <polygon points="220,80 340,80 400,747 160,747" fill="#cfc4b2"/>
   <rect x="0" y="620" width="560" height="127" fill="#b7a894"/>
