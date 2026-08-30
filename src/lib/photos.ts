@@ -5,6 +5,17 @@ const MAX_EDGE = 1100;
 const JPEG_QUALITY = 0.68;
 const MAX_FILES = 12;
 
+/**
+ * Demo stills in this kit ship as SVG (Git-friendly). Older seed data and
+ * persisted showings still ask for `.jpg` — rewrite those public paths so
+ * polaroids and listing thumbs never 404.
+ */
+export function fieldStillSrc(src: string | undefined | null): string {
+  if (!src) return "";
+  if (!src.startsWith("/photos/")) return src;
+  return src.replace(/\.jpe?g(\?.*)?$/i, ".svg$1");
+}
+
 function readAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -44,7 +55,9 @@ export async function filesToPhotos(
   files: File[],
   source: EvidencePhoto["source"],
 ): Promise<EvidencePhoto[]> {
-  const picked = files.filter((f) => f.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|heic)$/i.test(f.name)).slice(0, MAX_FILES);
+  const picked = files
+    .filter((f) => f.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|heic)$/i.test(f.name))
+    .slice(0, MAX_FILES);
   const photos: EvidencePhoto[] = [];
   for (const file of picked) {
     photos.push({
